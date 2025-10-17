@@ -207,7 +207,6 @@ defineExpose({ openModal })
 
 <template>
   <div>
-    <!-- Status Color Bar -->
     <div class="flex h-2 rounded overflow-hidden mb-6">
       <div v-for="(pct, status) in statusPercentages" :key="status" 
            :style="{ width: pct + '%', backgroundColor: statusBgColors[status] }"
@@ -290,21 +289,20 @@ defineExpose({ openModal })
     </div>
   </div>
 
-  <!-- Add Task Modal -->
-    <div 
-      v-if="showModal"
-      class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
-      @click.self="closeModal"
-    >
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6 sm:p-8">
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Add New Task</h2>
-            <button @click="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
+  <div 
+    v-if="showModal"
+    class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+    @click.self="closeModal"
+  >
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="p-6 sm:p-8">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Add New Task</h2>
+          <button @click="closeModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
           </div>
 
           <form @submit.prevent="handleSubmit" class="space-y-4">
@@ -418,7 +416,6 @@ defineExpose({ openModal })
       </div>
     </div>
 
-  <!-- Comment Modal -->
   <div v-if="showCommentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCommentModal = false">
     <div class="rounded-lg p-6 w-full max-w-lg mx-4" style="background-color: #2a2d3e;">
       <h3 class="text-white font-bold mb-4">Comments for: {{ currentCommentTask?.task }}</h3>

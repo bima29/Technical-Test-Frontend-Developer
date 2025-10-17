@@ -317,7 +317,6 @@ const datePercentages = computed(() => {
               </tr>
             </thead>
             <tbody>
-          <!-- New Task Row -->
           <tr v-if="showNewTaskRow" style="background-color: #1e2139; border: 1px solid #3b82f6;">
             <td class="px-3 py-3">
               <input type="checkbox" class="w-4 h-4" />
@@ -409,7 +408,6 @@ const datePercentages = computed(() => {
             </td>
           </tr>
 
-          <!-- Task Rows -->
           <tr v-for="task in tasks" :key="task.id" style="background-color: #2a2d3e; border-bottom: 1px solid #1e2139;" class="hover:bg-opacity-80 transition-all">
             <td class="px-3 py-3">
               <input type="checkbox" class="w-4 h-4" :checked="isTaskSelected(task.id)" @change="toggleTaskSelection(task.id)" />
@@ -438,7 +436,6 @@ const datePercentages = computed(() => {
               </div>
             </td>
 
-            <!-- Developers -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'developers', task.developers)">
               <div class="flex items-center gap-2">
                 <input 
@@ -460,7 +457,6 @@ const datePercentages = computed(() => {
               </div>
             </td>
 
-            <!-- Status -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'status', task.status)">
               <select 
                 v-if="editingCell === task.id + '-status'"
@@ -481,7 +477,6 @@ const datePercentages = computed(() => {
               </span>
             </td>
 
-            <!-- Priority -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'priority', task.priority)">
               <select 
                 v-if="editingCell === task.id + '-priority'"
@@ -502,7 +497,6 @@ const datePercentages = computed(() => {
               </span>
             </td>
 
-            <!-- Type -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'type', task.type)">
               <select 
                 v-if="editingCell === task.id + '-type'"
@@ -523,7 +517,6 @@ const datePercentages = computed(() => {
               </span>
             </td>
 
-            <!-- Date -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'date', task.date)">
               <input 
                 v-if="editingCell === task.id + '-date'"
@@ -538,7 +531,6 @@ const datePercentages = computed(() => {
               <span v-else class="cursor-pointer text-gray-400 hover:text-white transition-colors text-sm">{{ formatDate(task.date) }}</span>
             </td>
 
-            <!-- Estimated SP -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'estimatedSP', task.estimatedSP)">
               <input 
                 v-if="editingCell === task.id + '-estimatedSP'"
@@ -553,7 +545,6 @@ const datePercentages = computed(() => {
               <span v-else class="cursor-pointer text-gray-400 hover:text-white transition-colors text-sm">{{ task.estimatedSP }} SP</span>
             </td>
 
-            <!-- Actual SP -->
             <td class="px-3 py-3" @click="startEdit(task.id, 'actualSP', task.actualSP)">
               <input 
                 v-if="editingCell === task.id + '-actualSP'"
@@ -568,7 +559,6 @@ const datePercentages = computed(() => {
               <span v-else class="cursor-pointer text-gray-400 hover:text-white transition-colors text-sm">{{ task.actualSP }} SP</span>
             </td>
 
-            <!-- Actions -->
             <td class="px-3 py-3">
               <button 
                 @click="$emit('delete-task', task.id)"
@@ -599,7 +589,6 @@ const datePercentages = computed(() => {
     </div>
   </div>
 
-  <!-- Comment Modal -->
   <div v-if="showCommentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCommentModal = false">
     <div class="rounded-lg p-6 w-full max-w-lg mx-4" style="background-color: #2a2d3e;">
       <h3 class="text-white font-bold mb-4">Comments for: {{ currentCommentTask?.task }}</h3>
