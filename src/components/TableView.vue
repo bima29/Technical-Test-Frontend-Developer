@@ -14,6 +14,7 @@ const showNewTaskRow = ref(false)
 const selectedTasks = ref([])
 const showCommentModal = ref(false)
 const currentCommentTask = ref(null)
+const newComment = ref('')
 
 const newTask = ref({
   task: 'New task',
@@ -21,7 +22,7 @@ const newTask = ref({
   status: 'Ready to start',
   priority: 'Medium',
   type: 'Feature Enhancements',
-  date: new Date().toISOString().split('T')[0],
+  date: '',
   estimatedSP: 0,
   actualSP: 0,
   comments: []
@@ -86,6 +87,7 @@ function startEdit(taskId, field, currentValue) {
 
 function saveEdit(task, field) {
   let val = editingValue.value
+  const tmpCell = editingCell.value
   
   if (field === 'developers') {
     val = val.split(',').map(d => d.trim()).filter(d => d)
@@ -114,7 +116,7 @@ function handleAddTask() {
     status: 'Ready to start',
     priority: 'Medium',
     type: 'Feature Enhancements',
-    date: new Date().toISOString().split('T')[0],
+    date: '',
     estimatedSP: 0,
     actualSP: 0,
     comments: []
@@ -123,7 +125,9 @@ function handleAddTask() {
 }
 
 function formatDate(dateStr) {
+  if (!dateStr || dateStr === '' || typeof dateStr !== 'string') return '-'
   const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '-'
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return d.getDate() + ' ' + months[d.getMonth()] + ', ' + d.getFullYear()
 }
@@ -133,10 +137,15 @@ const allSelected = computed(() => {
 })
 
 function toggleSelectAll() {
-  if (allSelected.value) {
+  if (allSelected.value === true) {
     selectedTasks.value = []
   } else {
-    selectedTasks.value = props.tasks.map(t => t.id)
+    const temp = []
+    for (let i = 0; i < props.tasks.length; i++) {
+      const t = props.tasks[i]
+      temp.push(t.id)
+    }
+    selectedTasks.value = temp
   }
 }
 
@@ -150,12 +159,38 @@ function toggleTaskSelection(taskId) {
 }
 
 function isTaskSelected(taskId) {
-  return selectedTasks.value.includes(taskId)
+  const arr = selectedTasks.value || []
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === taskId) {
+      return true
+    }
+  }
+  return false
 }
 
 function openCommentModal(task) {
   currentCommentTask.value = task
-  showCommentModal.value = true
+  if (!showCommentModal.value) {
+    showCommentModal.value = true
+  } else {
+    showCommentModal.value = true
+  }
+}
+
+function addComment() {
+  if (!currentCommentTask.value) return
+  const text = (newComment.value || '').trim()
+  if (!text) return
+  const updated = {
+    ...currentCommentTask.value,
+    comments: [
+      ...((currentCommentTask.value.comments) || []),
+      { text, createdAt: new Date().toISOString() }
+    ]
+  }
+  emit('update-task', updated)
+  currentCommentTask.value = updated
+  newComment.value = ''
 }
 
 defineExpose({ toggleNewTask })
@@ -552,15 +587,26 @@ const datePercentages = computed(() => {
   <div v-if="showCommentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCommentModal = false">
     <div class="rounded-lg p-6 w-full max-w-lg mx-4" style="background-color: #2a2d3e;">
       <h3 class="text-white font-bold mb-4">Comments for: {{ currentCommentTask?.task }}</h3>
-      <div class="mb-4 p-4 bg-gray-800 rounded min-h-[150px]">
-        <p class="text-gray-400 text-sm">No comments yet...</p>
+      <div class="mb-4 p-4 bg-gray-800 rounded min-h-[150px] space-y-3">
+        <div v-if="currentCommentTask?.comments && currentCommentTask.comments.length > 0" class="space-y-2">
+          <div v-for="(c, idx) in currentCommentTask.comments" :key="idx" class="text-sm text-gray-300">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-200">•</span>
+              <span>{{ c.text }}</span>
+            </div>
+            <div class="text-xs text-gray-500 ml-4" v-if="c.createdAt">{{ new Date(c.createdAt).toLocaleString() }}</div>
+          </div>
+        </div>
+        <p v-else class="text-gray-400 text-sm">No comments yet...</p>
       </div>
       <textarea 
+        v-model="newComment"
         placeholder="Add a comment..."
         class="w-full px-4 py-2 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:border-blue-500 mb-4"
         rows="3"
       ></textarea>
       <div class="flex gap-2">
+        <button @click="addComment" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">Add Comment</button>
         <button @click="showCommentModal = false" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
           Close
         </button>

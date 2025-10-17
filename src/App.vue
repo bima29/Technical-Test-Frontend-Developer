@@ -19,18 +19,29 @@ onMounted(async () => {
   const result = await response.json()
   
   if (result.response && Array.isArray(result.data)) {
-    tasks.value = result.data.map((item, index) => ({
-      id: index + 1,
-      task: item.title,
-      developers: item.developer ? item.developer.split(',').map(d => d.trim()) : [],
-      status: item.status,
-      priority: item.priority,
-      type: item.type,
-      date: new Date().toISOString().split('T')[0],
-      estimatedSP: item['Estimated SP'],
-      actualSP: item['Actual SP'],
-      comments: []
-    }))
+    let tmp = []
+    for (let i = 0; i < result.data.length; i++) {
+      const item = result.data[i]
+      const devsStr = item.developer
+      let devsArr = []
+      if (devsStr && typeof devsStr === 'string') {
+        devsArr = devsStr.split(',').map((d)=> d.trim())
+      }
+      const one = {
+        id: i + 1,
+        task: item.title,
+        developers: devsArr,
+        status: item.status,
+        priority: item.priority,
+        type: item.type,
+        date: '',
+        estimatedSP: item['Estimated SP'],
+        actualSP: item['Actual SP'],
+        comments: []
+      }
+      tmp.push(one)
+    }
+    tasks.value = tmp
   }
 })
 
