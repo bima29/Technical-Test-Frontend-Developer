@@ -168,6 +168,17 @@ function isTaskSelected(taskId) {
   return false
 }
 
+function deleteSelected() {
+  const ids = selectedTasks.value || []
+  if (ids.length > 0) {
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i]
+      emit('delete-task', id)
+    }
+    selectedTasks.value = []
+  }
+}
+
 function openCommentModal(task) {
   currentCommentTask.value = task
   if (!showCommentModal.value) {
@@ -279,6 +290,11 @@ const datePercentages = computed(() => {
         <div class="flex items-center gap-2 mb-3">
           <span class="text-gray-400 text-sm">▼</span>
           <span class="text-gray-300 font-medium">All Task</span>
+        </div>
+        <div v-if="selectedTasks.length > 0" class="mb-3">
+          <button @click="deleteSelected" class="px-3 py-1.5 bg-red-600 text-white text-xs sm:text-sm rounded hover:bg-red-700 font-medium">
+            Delete Selected ({{ selectedTasks.length }})
+          </button>
         </div>
         
         <div class="overflow-x-auto">
