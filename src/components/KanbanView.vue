@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   tasks: Array
@@ -8,6 +8,8 @@ const props = defineProps({
 const emit = defineEmits(['add-task', 'update-task'])
 
 const showModal = ref(false)
+const showCommentModal = ref(false)
+const currentCommentTask = ref(null)
 const draggedTask = ref(null)
 const newTask = ref({
   task: '',
@@ -17,7 +19,8 @@ const newTask = ref({
   type: 'Feature Enhancements',
   date: new Date().toISOString().split('T')[0],
   estimatedSP: 0,
-  actualSP: 0
+  actualSP: 0,
+  comments: []
 })
 
 const statusColumns = [
@@ -33,11 +36,11 @@ const priorityOptions = ['Critical', 'High', 'Medium', 'Low', 'Best Effort']
 const typeOptions = ['Feature Enhancements', 'Other', 'Bug']
 
 const priorityColors = {
-  'Critical': '#dc2626',
-  'High': '#f97316',
-  'Medium': '#eab308',
-  'Low': '#06b6d4',
-  'Best Effort': '#6b7280'
+  'Critical': '#ef4444',
+  'High': '#3b82f6',
+  'Medium': '#06b6d4',
+  'Low': '#10b981',
+  'Best Effort': '#ec4899'
 }
 
 const typeColors = {
@@ -54,6 +57,22 @@ const statusBgColors = {
   'Done': '#10b981',
   'Stuck': '#ef4444'
 }
+
+const statusPercentages = computed(() => {
+  if (props.tasks.length === 0) return {}
+  
+  const counts = {}
+  statusColumns.forEach(opt => counts[opt] = 0)
+  props.tasks.forEach(t => {
+    if (counts[t.status] !== undefined) counts[t.status]++
+  })
+  
+  const pcts = {}
+  Object.keys(counts).forEach(k => {
+    pcts[k] = (counts[k] / props.tasks.length * 100).toFixed(1)
+  })
+  return pcts
+})
 
 function getTasksByStatus(status) {
   let filtered = []
@@ -83,8 +102,19 @@ function resetForm() {
     type: 'Feature Enhancements',
     date: new Date().toISOString().split('T')[0],
     estimatedSP: 0,
-    actualSP: 0
+    actualSP: 0,
+    comments: []
   }
+}
+
+function openCommentModal(task) {
+  currentCommentTask.value = task
+  showCommentModal.value = true
+}
+
+function getDeveloperInitials(developers) {
+  if (!developers || developers.length === 0) return '?'
+  return developers[0].charAt(0).toUpperCase()
 }
 
 function handleSubmit() {
@@ -124,19 +154,20 @@ function handleDragEnd() {
   draggedTask.value = null
 }
 
-function getStatusEmoji(status) {
-  if(status === 'Ready to start') return '🚀'
-  if(status === 'In Progress') return '⚡'
-  if(status === 'Waiting for review') return '👀'
-  if(status === 'Pending Deploy') return '🚀'
-  if(status === 'Done') return '✅'
-  if(status === 'Stuck') return '🚨'
-  return '📋'
-}
+defineExpose({ openModal })
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  <div>
+    <!-- Status Color Bar -->
+    <div class="flex h-2 rounded overflow-hidden mb-6">
+      <div v-for="(pct, status) in statusPercentages" :key="status" 
+           :style="{ width: pct + '%', backgroundColor: statusBgColors[status] }"
+           v-if="parseFloat(pct) > 0">
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     <div 
       v-for="status in statusColumns" 
       :key="status"
@@ -144,31 +175,35 @@ function getStatusEmoji(status) {
       @dragover="handleDragOver"
       @drop="handleDrop($event, status)"
     >
-      <div class="p-3 text-white font-semibold text-sm flex items-center justify-between"
+      <div class="p-3 text-white font-semibold text-sm flex items-center justify-between rounded-t-lg"
            :style="{ backgroundColor: statusBgColors[status] }">
         <span>{{ status }} {{ getTasksByStatus(status).length }}</span>
       </div>
 
-      <div class="p-3 space-y-3 min-h-[300px]" style="background-color: #2a2d3e;">
+      <div class="p-3 space-y-3 min-h-[400px] rounded-b-lg" style="background-color: #2a2d3e;">
         <div 
           v-for="task in getTasksByStatus(status)" 
           :key="task.id"
-          class="rounded-lg p-3 cursor-move transition-all"
-          style="background-color: #1e2139;"
+          class="rounded-lg p-4 cursor-move transition-all hover:shadow-lg"
+          style="background-color: #3a3d52;"
           draggable="true"
           @dragstart="handleDragStart(task)"
           @dragend="handleDragEnd"
         >
-          <h4 class="text-gray-300 mb-3 text-sm font-medium">{{ task.task }}</h4>
+          <h4 class="text-gray-200 mb-3 text-sm font-medium leading-snug">{{ task.task }}</h4>
 
-          <div class="flex flex-wrap gap-2 mb-3">
+          <div class="flex items-center gap-2 mb-2">
             <span 
-              class="inline-block px-2 py-1 rounded text-white text-xs"
+              class="inline-block px-2 py-1 rounded text-white text-xs font-medium"
               :style="{ backgroundColor: priorityColors[task.priority] }"
             >
               {{ task.priority }}
             </span>
             
+            <span class="text-xs text-gray-400">{{ task.estimatedSP }} SP</span>
+          </div>
+
+          <div class="mb-3">
             <span 
               class="inline-block px-2 py-1 rounded text-white text-xs"
               :style="{ backgroundColor: typeColors[task.type] }"
@@ -177,22 +212,18 @@ function getStatusEmoji(status) {
             </span>
           </div>
 
-          <div class="text-xs text-gray-400 mb-3">
-            {{ task.estimatedSP }} SP
-          </div>
-
-          <div class="flex items-center gap-2">
-            <div class="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center text-xs text-white">
-              {{ task.developers[0] ? task.developers[0].charAt(0) : 'U' }}
+          <div class="flex items-center gap-2 pt-2 border-t border-gray-600">
+            <div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-semibold">
+              {{ getDeveloperInitials(task.developers) }}
             </div>
-            <button class="p-1 text-gray-500 hover:text-gray-300">
+            <button @click="openCommentModal(task)" class="p-1 text-gray-400 hover:text-gray-200 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
               </svg>
             </button>
-            <button class="p-1 text-gray-500 hover:text-gray-300 ml-auto">
+            <button class="p-1 text-gray-400 hover:text-gray-200 ml-auto transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
               </svg>
             </button>
           </div>
@@ -206,9 +237,10 @@ function getStatusEmoji(status) {
         </div>
       </div>
     </div>
+    </div>
   </div>
 
-    <!-- Modal -->
+  <!-- Add Task Modal -->
     <div 
       v-if="showModal"
       class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
@@ -335,4 +367,24 @@ function getStatusEmoji(status) {
         </div>
       </div>
     </div>
+
+  <!-- Comment Modal -->
+  <div v-if="showCommentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCommentModal = false">
+    <div class="rounded-lg p-6 w-full max-w-lg mx-4" style="background-color: #2a2d3e;">
+      <h3 class="text-white font-bold mb-4">Comments for: {{ currentCommentTask?.task }}</h3>
+      <div class="mb-4 p-4 bg-gray-800 rounded min-h-[150px]">
+        <p class="text-gray-400 text-sm">No comments yet...</p>
+      </div>
+      <textarea 
+        placeholder="Add a comment..."
+        class="w-full px-4 py-2 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:border-blue-500 mb-4"
+        rows="3"
+      ></textarea>
+      <div class="flex gap-2">
+        <button @click="showCommentModal = false" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

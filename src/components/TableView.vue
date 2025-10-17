@@ -11,6 +11,9 @@ const emit = defineEmits(['add-task', 'update-task', 'delete-task', 'update-sort
 const editingCell = ref(null)
 const editingValue = ref('')
 const showNewTaskRow = ref(false)
+const selectedTasks = ref([])
+const showCommentModal = ref(false)
+const currentCommentTask = ref(null)
 
 const newTask = ref({
   task: 'New task',
@@ -20,7 +23,8 @@ const newTask = ref({
   type: 'Feature Enhancements',
   date: new Date().toISOString().split('T')[0],
   estimatedSP: 0,
-  actualSP: 0
+  actualSP: 0,
+  comments: []
 })
 
 const statusOptions = ['Ready to start', 'In Progress', 'Waiting for review', 'Pending Deploy', 'Done', 'Stuck']
@@ -112,7 +116,8 @@ function handleAddTask() {
     type: 'Feature Enhancements',
     date: new Date().toISOString().split('T')[0],
     estimatedSP: 0,
-    actualSP: 0
+    actualSP: 0,
+    comments: []
   }
   showNewTaskRow.value = false
 }
@@ -121,6 +126,36 @@ function formatDate(dateStr) {
   const d = new Date(dateStr)
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
   return d.getDate() + ' ' + months[d.getMonth()] + ', ' + d.getFullYear()
+}
+
+const allSelected = computed(() => {
+  return props.tasks.length > 0 && selectedTasks.value.length === props.tasks.length
+})
+
+function toggleSelectAll() {
+  if (allSelected.value) {
+    selectedTasks.value = []
+  } else {
+    selectedTasks.value = props.tasks.map(t => t.id)
+  }
+}
+
+function toggleTaskSelection(taskId) {
+  const idx = selectedTasks.value.indexOf(taskId)
+  if (idx > -1) {
+    selectedTasks.value.splice(idx, 1)
+  } else {
+    selectedTasks.value.push(taskId)
+  }
+}
+
+function isTaskSelected(taskId) {
+  return selectedTasks.value.includes(taskId)
+}
+
+function openCommentModal(task) {
+  currentCommentTask.value = task
+  showCommentModal.value = true
 }
 
 defineExpose({ toggleNewTask })
@@ -216,8 +251,9 @@ const datePercentages = computed(() => {
             <thead>
               <tr style="background-color: #1e2139;">
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-400 w-10">
-                  <input type="checkbox" class="w-4 h-4" />
+                  <input type="checkbox" class="w-4 h-4" :checked="allSelected" @change="toggleSelectAll" />
                 </th>
+                <th class="px-3 py-3 text-center text-xs font-semibold text-gray-400 w-10"></th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-400">Task</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-400">Developer</th>
                 <th class="px-3 py-3 text-left text-xs font-semibold text-gray-400">Status</th>
@@ -234,6 +270,13 @@ const datePercentages = computed(() => {
           <tr v-if="showNewTaskRow" style="background-color: #1e2139; border: 1px solid #3b82f6;">
             <td class="px-3 py-3">
               <input type="checkbox" class="w-4 h-4" />
+            </td>
+            <td class="px-3 py-3 text-center">
+              <button class="text-gray-500 hover:text-gray-300">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+              </button>
             </td>
             <td class="px-3 py-3">
               <input 
@@ -318,7 +361,14 @@ const datePercentages = computed(() => {
           <!-- Task Rows -->
           <tr v-for="task in tasks" :key="task.id" style="background-color: #2a2d3e; border-bottom: 1px solid #1e2139;" class="hover:bg-opacity-80 transition-all">
             <td class="px-3 py-3">
-              <input type="checkbox" class="w-4 h-4" />
+              <input type="checkbox" class="w-4 h-4" :checked="isTaskSelected(task.id)" @change="toggleTaskSelection(task.id)" />
+            </td>
+            <td class="px-3 py-3 text-center">
+              <button @click="openCommentModal(task)" class="text-gray-500 hover:text-gray-300 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                </svg>
+              </button>
             </td>
             <td class="px-3 py-3" @click="startEdit(task.id, 'task', task.task)">
               <div class="flex items-center gap-2">
@@ -331,11 +381,8 @@ const datePercentages = computed(() => {
                   class="w-full px-3 py-2 border border-gray-600 rounded bg-gray-800 text-white text-sm focus:outline-none focus:border-blue-500"
                   autofocus
                 />
-                <span v-else class="cursor-pointer text-gray-300 hover:text-white transition-colors text-sm flex items-center gap-2">
+                <span v-else class="cursor-pointer text-gray-300 hover:text-white transition-colors text-sm">
                   {{ task.task }}
-                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                  </svg>
                 </span>
               </div>
             </td>
@@ -485,6 +532,7 @@ const datePercentages = computed(() => {
 
           <tr v-if="!showNewTaskRow" style="background-color: #2a2d3e; border-bottom: 1px solid #1e2139;">
             <td class="px-3 py-3"></td>
+            <td class="px-3 py-3"></td>
             <td colspan="9" class="px-3 py-3">
               <button @click="toggleNewTask" class="text-gray-400 hover:text-white text-sm transition-colors">
                 + Add task
@@ -492,67 +540,30 @@ const datePercentages = computed(() => {
             </td>
           </tr>
 
-          <tr style="background-color: #1e2139;">
-            <td class="px-3 py-3"></td>
-            <td class="px-3 py-3"></td>
-            <td class="px-3 py-3"></td>
-            
-            <td class="px-3 py-3">
-              <div class="flex h-6 rounded overflow-hidden">
-                <div v-for="(pct, status) in statusPercentages" :key="status" 
-                     :style="{ width: pct + '%', backgroundColor: statusColors[status] }"
-                     v-if="parseFloat(pct) > 0">
-                </div>
-              </div>
-            </td>
-
-            <td class="px-3 py-3">
-              <div class="flex h-6 rounded overflow-hidden">
-                <div v-for="(pct, priority) in priorityPercentages" :key="priority" 
-                     :style="{ width: pct + '%', backgroundColor: priorityColors[priority] }"
-                     v-if="parseFloat(pct) > 0">
-                </div>
-              </div>
-            </td>
-
-            <td class="px-3 py-3">
-              <div class="flex h-6 rounded overflow-hidden">
-                <div v-for="(pct, type) in typePercentages" :key="type" 
-                     :style="{ width: pct + '%', backgroundColor: typeColors[type] }"
-                     v-if="parseFloat(pct) > 0">
-                </div>
-              </div>
-            </td>
-
-            <td class="px-3 py-3">
-              <div class="flex h-6 rounded overflow-hidden">
-                <div v-for="(item, idx) in datePercentages" :key="idx" 
-                     v-if="item && parseFloat(item.pct) > 0"
-                     :style="{ width: item.pct + '%', backgroundColor: item.color }">
-                </div>
-              </div>
-            </td>
-
-            <td class="px-3 py-3">
-              <div class="flex h-6 rounded overflow-hidden">
-                <div class="w-1/3" style="background-color: #fbbf24;"></div>
-                <div class="w-1/3" style="background-color: #f59e0b;"></div>
-                <div class="w-1/3" style="background-color: #ea580c;"></div>
-              </div>
-            </td>
-
-            <td class="px-3 py-3">
-              <div class="flex h-6 rounded overflow-hidden">
-                <div class="w-1/2" style="background-color: #d1d5db;"></div>
-                <div class="w-1/2" style="background-color: #9ca3af;"></div>
-              </div>
-            </td>
-
-            <td class="px-3 py-3"></td>
-          </tr>
+          
         </tbody>
       </table>
     </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comment Modal -->
+  <div v-if="showCommentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showCommentModal = false">
+    <div class="rounded-lg p-6 w-full max-w-lg mx-4" style="background-color: #2a2d3e;">
+      <h3 class="text-white font-bold mb-4">Comments for: {{ currentCommentTask?.task }}</h3>
+      <div class="mb-4 p-4 bg-gray-800 rounded min-h-[150px]">
+        <p class="text-gray-400 text-sm">No comments yet...</p>
+      </div>
+      <textarea 
+        placeholder="Add a comment..."
+        class="w-full px-4 py-2 rounded bg-gray-800 text-white border border-gray-600 focus:outline-none focus:border-blue-500 mb-4"
+        rows="3"
+      ></textarea>
+      <div class="flex gap-2">
+        <button @click="showCommentModal = false" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          Close
+        </button>
       </div>
     </div>
   </div>

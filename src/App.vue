@@ -12,59 +12,25 @@ const showSearchModal = ref(false)
 const showPersonModal = ref(false)
 const showSortModal = ref(false)
 const tableView = ref(null)
+const kanbanView = ref(null)
 
 onMounted(async () => {
-  try {
-    const response = await fetch('https://mocki.io/v1/4e602db4-efab-438f-a664-bec50fc16f7e')
-    const data = await response.json()
-    tasks.value = data
-  } catch (error) {
-    tasks.value = [
-      {
-        id: 1,
-        task: 'New Task',
-        developers: [],
-        status: 'In Progress',
-        priority: 'Medium',
-        type: 'Feature Enhancements',
-        date: '2024-10-20',
-        estimatedSP: 0,
-        actualSP: 0
-      },
-      {
-        id: 2,
-        task: 'New task',
-        developers: [],
-        status: 'Waiting for review',
-        priority: 'Medium',
-        type: 'Feature Enhancements',
-        date: '2024-10-18',
-        estimatedSP: 0,
-        actualSP: 0
-      },
-      {
-        id: 3,
-        task: 'New task',
-        developers: [],
-        status: 'Ready to start',
-        priority: 'Best Effort',
-        type: 'Feature Enhancements',
-        date: '2024-10-15',
-        estimatedSP: 0,
-        actualSP: 0
-      },
-      {
-        id: 4,
-        task: 'Committed Feature',
-        developers: [],
-        status: 'Ready to start',
-        priority: 'High',
-        type: 'Other',
-        date: '2024-10-22',
-        estimatedSP: 2,
-        actualSP: 1.5
-      }
-    ]
+  const response = await fetch('https://mocki.io/v1/f7861fc0-9071-4034-afed-777f3b590c3c')
+  const result = await response.json()
+  
+  if (result.response && Array.isArray(result.data)) {
+    tasks.value = result.data.map((item, index) => ({
+      id: index + 1,
+      task: item.title,
+      developers: item.developer ? item.developer.split(',').map(d => d.trim()) : [],
+      status: item.status,
+      priority: item.priority,
+      type: item.type,
+      date: new Date().toISOString().split('T')[0],
+      estimatedSP: item['Estimated SP'],
+      actualSP: item['Actual SP'],
+      comments: []
+    }))
   }
 })
 
@@ -177,8 +143,10 @@ function addSortColumn(field) {
 }
 
 function handleNewTask() {
-  if (tableView.value) {
+  if (currentView.value === 'table' && tableView.value) {
     tableView.value.toggleNewTask()
+  } else if (currentView.value === 'kanban' && kanbanView.value) {
+    kanbanView.value.openModal()
   }
 }
 </script>
@@ -263,6 +231,7 @@ function handleNewTask() {
       />
       
       <KanbanView 
+        ref="kanbanView"
         v-else
         :tasks="filteredTasks"
         @add-task="addNewTask"
