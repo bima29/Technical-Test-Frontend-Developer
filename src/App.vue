@@ -14,92 +14,160 @@ const showSortModal = ref(false)
 const tableView = ref(null)
 const kanbanView = ref(null)
 
-onMounted(async () => {
-  const response = await fetch('https://mocki.io/v1/f7861fc0-9071-4034-afed-777f3b590c3c')
-  const result = await response.json()
-  
-  if (result.response && Array.isArray(result.data)) {
-    let tmp = []
-    for (let i = 0; i < result.data.length; i++) {
-      const item = result.data[i]
-      const devsStr = item.developer
-      let devsArr = []
-      if (devsStr && typeof devsStr === 'string') {
-        devsArr = devsStr.split(',').map((d)=> d.trim())
+onMounted(() => {
+  fetch('https://mocki.io/v1/f7861fc0-9071-4034-afed-777f3b590c3c')
+    .then((response) => {
+      return response.json()
+    })
+    .then((result) => {
+      if (result && result.response && Array.isArray(result.data)) {
+        let tmp = []
+        for (let i = 0; i < result.data.length; i++) {
+          const item = result.data[i]
+          const devsStr = item.developer
+          let devsArr = []
+          if (devsStr && typeof devsStr === 'string') {
+            devsArr = devsStr.split(',').map(function(d){ return d.trim() })
+          }
+          const one = {
+            id: i + 1,
+            task: item.title,
+            developers: devsArr,
+            status: item.status,
+            priority: item.priority,
+            type: item.type,
+            date: '',
+            estimatedSP: item['Estimated SP'],
+            actualSP: item['Actual SP'],
+            comments: []
+          }
+          tmp.push(one)
+        }
+        tasks.value = tmp
       }
-      const one = {
-        id: i + 1,
-        task: item.title,
-        developers: devsArr,
-        status: item.status,
-        priority: item.priority,
-        type: item.type,
-        date: '',
-        estimatedSP: item['Estimated SP'],
-        actualSP: item['Actual SP'],
-        comments: []
-      }
-      tmp.push(one)
-    }
-    tasks.value = tmp
-  }
+    })
+    .catch(() => {
+      // do nothing for now
+    })
 })
 
 const allDevelopers = computed(() => {
-  const devs = new Set()
-  tasks.value.forEach(t => {
-    if (Array.isArray(t.developers)) {
-      t.developers.forEach(d => devs.add(d))
+  const result = []
+  const list = tasks.value || []
+  for (let i = 0; i < list.length; i++) {
+    const t = list[i]
+    if (t && Array.isArray(t.developers)) {
+      for (let j = 0; j < t.developers.length; j++) {
+        const name = t.developers[j]
+        if (result.indexOf(name) === -1) {
+          result.push(name)
+        }
+      }
     }
-  })
-  return Array.from(devs)
+  }
+  return result
 })
 
 const filteredTasks = computed(() => {
-  let result = [...tasks.value]
-  
+  let result = []
+  const src = tasks.value || []
+  for (let i = 0; i < src.length; i++) {
+    result.push(src[i])
+  }
+
   if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    result = result.filter(t => t.task.toLowerCase().includes(q))
+    const q = (searchQuery.value + '').toLowerCase()
+    const temp = []
+    for (let k = 0; k < result.length; k++) {
+      const t = result[k]
+      const name = (t && t.task ? (t.task + '').toLowerCase() : '')
+      if (name.indexOf(q) !== -1) {
+        temp.push(t)
+      }
+    }
+    result = temp
   }
-  
-  if (selectedDevelopers.value.length > 0) {
-    result = result.filter(t => {
-      if (!Array.isArray(t.developers)) return false
-      return t.developers.some(d => selectedDevelopers.value.includes(d))
-    })
+
+  if ((selectedDevelopers.value || []).length > 0) {
+    const wanted = selectedDevelopers.value
+    const temp2 = []
+    for (let m = 0; m < result.length; m++) {
+      const t2 = result[m]
+      if (!Array.isArray(t2.developers)) continue
+      let ok = false
+      for (let n = 0; n < t2.developers.length; n++) {
+        const dev = t2.developers[n]
+        if (wanted.indexOf(dev) !== -1) { ok = true; break }
+      }
+      if (ok) temp2.push(t2)
+    }
+    result = temp2
   }
-  
-  if (sortConfig.value.length > 0) {
-    result.sort((a, b) => {
-      for (let i = 0; i < sortConfig.value.length; i++) {
-        const config = sortConfig.value[i]
-        let valA = a[config.field]
-        let valB = b[config.field]
-        
-        if (valA === valB) continue
-        
-        if (config.direction === 'asc') {
-          return valA > valB ? 1 : -1
-        } else {
-          return valA < valB ? 1 : -1
+
+  if ((sortConfig.value || []).length > 0) {
+    // manual selection-sort like approach
+    for (let i = 0; i < result.length; i++) {
+      let idxMin = i
+      for (let j = i + 1; j < result.length; j++) {
+        let cmp = 0
+        for (let k = 0; k < sortConfig.value.length; k++) {
+          const config = sortConfig.value[k]
+          const a = result[idxMin]
+          const b = result[j]
+          let valA = a[config.field]
+          let valB = b[config.field]
+          if (valA === valB) { continue }
+          if (config.direction === 'asc') {
+            cmp = (valA > valB) ? 1 : -1
+          } else {
+            cmp = (valA < valB) ? 1 : -1
+          }
+          break
+        }
+        if (cmp > 0) {
+          idxMin = j
         }
       }
-      return 0
-    })
+      if (idxMin !== i) {
+        const tmp = result[i]
+        result[i] = result[idxMin]
+        result[idxMin] = tmp
+      }
+    }
   }
-  
+
   return result
 })
 
 function addNewTask(task) {
-  tasks.value.unshift({ id: Date.now(), ...task })
+  const newObj = {
+    id: Date.now(),
+    task: task ? task.task : '',
+    developers: task && task.developers ? task.developers : [],
+    status: task ? task.status : '',
+    priority: task ? task.priority : '',
+    type: task ? task.type : '',
+    date: task ? task.date : '',
+    estimatedSP: task ? task.estimatedSP : 0,
+    actualSP: task ? task.actualSP : 0,
+    comments: task && task.comments ? task.comments : []
+  }
+  tasks.value.unshift(newObj)
 }
 
 function updateTask(t) {
   const idx = tasks.value.findIndex(x => x.id === t.id)
   if (idx !== -1) {
-    tasks.value[idx] = t
+    const cur = tasks.value[idx]
+    cur.task = t.task
+    cur.developers = t.developers
+    cur.status = t.status
+    cur.priority = t.priority
+    cur.type = t.type
+    cur.date = t.date
+    cur.estimatedSP = t.estimatedSP
+    cur.actualSP = t.actualSP
+    cur.comments = t.comments
   }
 }
 
@@ -111,19 +179,37 @@ function deleteTask(id) {
 }
 
 function changeView(v) {
-  currentView.value = v
+  if (v === 'table') {
+    currentView.value = 'table'
+  } else if (v === 'kanban') {
+    currentView.value = 'kanban'
+  } else {
+    currentView.value = v
+  }
 }
 
 function toggleSearch() {
-  showSearchModal.value = !showSearchModal.value
+  if (showSearchModal.value) {
+    showSearchModal.value = false
+  } else {
+    showSearchModal.value = true
+  }
 }
 
 function togglePerson() {
-  showPersonModal.value = !showPersonModal.value
+  if (showPersonModal.value) {
+    showPersonModal.value = false
+  } else {
+    showPersonModal.value = true
+  }
 }
 
 function toggleSort() {
-  showSortModal.value = !showSortModal.value
+  if (showSortModal.value) {
+    showSortModal.value = false
+  } else {
+    showSortModal.value = true
+  }
 }
 
 function clearFilters() {
@@ -140,17 +226,54 @@ function toggleDeveloper(dev) {
   }
 }
 
+function isDevSelected(dev) {
+  const arr = selectedDevelopers.value || []
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] === dev) return true
+  }
+  return false
+}
+
 function addSortColumn(field) {
-  const existing = sortConfig.value.find(s => s.field === field)
-  if (existing) {
-    if (existing.direction === 'asc') {
-      existing.direction = 'desc'
+  let idx = -1
+  for (let i = 0; i < sortConfig.value.length; i++) {
+    if (sortConfig.value[i].field === field) { idx = i; break }
+  }
+  if (idx !== -1) {
+    if (sortConfig.value[idx].direction === 'asc') {
+      sortConfig.value[idx].direction = 'desc'
     } else {
-      sortConfig.value = sortConfig.value.filter(s => s.field !== field)
+      const temp = []
+      for (let j = 0; j < sortConfig.value.length; j++) {
+        if (j !== idx) temp.push(sortConfig.value[j])
+      }
+      sortConfig.value = temp
     }
   } else {
-    sortConfig.value.push({ field, direction: 'asc' })
+    const added = { field: field, direction: 'asc' }
+    const next = []
+    for (let k = 0; k < sortConfig.value.length; k++) next.push(sortConfig.value[k])
+    next.push(added)
+    sortConfig.value = next
   }
+}
+
+function getSortIndex(field) {
+  for (let i = 0; i < sortConfig.value.length; i++) {
+    if (sortConfig.value[i].field === field) return i
+  }
+  return -1
+}
+
+function getSortDirection(field) {
+  let dir = ''
+  for (let i = 0; i < sortConfig.value.length; i++) {
+    if (sortConfig.value[i].field === field) {
+      dir = sortConfig.value[i].direction
+      break
+    }
+  }
+  return dir
 }
 
 function handleNewTask() {
@@ -169,7 +292,6 @@ function handleNewTask() {
       <div class="mb-4">
         <div class="flex items-center justify-between mb-4 px-2">
           <div class="flex items-center gap-4">
-            <span class="text-gray-400 text-sm">🏠</span>
             <button 
               @click="changeView('table')"
               class="px-4 py-2 rounded-md font-medium text-sm transition-all"
@@ -198,7 +320,6 @@ function handleNewTask() {
             style="background-color: #2563eb;"
           >
             <span>New task</span>
-            <span class="text-xs">▼</span>
           </button>
 
           <button 
@@ -206,7 +327,6 @@ function handleNewTask() {
             class="px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white"
             style="background-color: #2a2d3e;"
           >
-            <span>🔍</span>
             <span>Search</span>
           </button>
 
@@ -215,7 +335,6 @@ function handleNewTask() {
             class="px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white"
             style="background-color: #2a2d3e;"
           >
-            <span>👤</span>
             <span>Person</span>
           </button>
 
@@ -224,7 +343,6 @@ function handleNewTask() {
             class="px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white"
             style="background-color: #2a2d3e;"
           >
-            <span>⇅</span>
             <span>Sort</span>
           </button>
         </div>
@@ -277,7 +395,7 @@ function handleNewTask() {
           <div v-for="dev in allDevelopers" :key="dev" class="flex items-center gap-2">
             <input 
               type="checkbox"
-              :checked="selectedDevelopers.includes(dev)"
+              :checked="isDevSelected(dev)"
               @change="toggleDeveloper(dev)"
               class="w-4 h-4"
             />
@@ -303,10 +421,10 @@ function handleNewTask() {
                :key="field"
                @click="addSortColumn(field)"
                class="px-4 py-2 rounded cursor-pointer text-gray-300 hover:bg-gray-700 flex items-center justify-between"
-               :class="sortConfig.find(s => s.field === field) ? 'bg-gray-700' : 'bg-gray-800'">
+               :class="getSortIndex(field) !== -1 ? 'bg-gray-700' : 'bg-gray-800'">
             <span>{{ field }}</span>
-            <span v-if="sortConfig.find(s => s.field === field)">
-              {{ sortConfig.find(s => s.field === field).direction === 'asc' ? '↑' : '↓' }}
+            <span v-if="getSortIndex(field) !== -1">
+              {{ getSortDirection(field) === 'asc' ? '↑' : '↓' }}
             </span>
           </div>
         </div>

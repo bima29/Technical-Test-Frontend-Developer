@@ -146,6 +146,11 @@ function getDeveloperInitials(developers) {
   return developers[0].charAt(0).toUpperCase()
 }
 
+function getDevInitial(name) {
+  if (!name || typeof name !== 'string') return '?'
+  return name.charAt(0).toUpperCase()
+}
+
 function handleSubmit() {
   const name = newTask.value.task
   if (!name || name === '') {
@@ -261,8 +266,15 @@ defineExpose({ openModal })
           </div>
 
           <div class="flex items-center gap-2 pt-2 border-t border-gray-600">
-            <div class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-semibold">
-              {{ getDeveloperInitials(task.developers) }}
+            <div class="flex -space-x-2">
+              <div 
+                v-for="(dev, i) in (Array.isArray(task.developers) ? task.developers : [])" 
+                :key="i"
+                class="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-semibold ring-2 ring-[#2a2d3e]"
+                :title="dev"
+              >
+                {{ getDevInitial(dev) }}
+              </div>
             </div>
             <button @click="openCommentModal(task)" class="p-1 text-gray-400 hover:text-gray-200 transition-colors">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
