@@ -1,0 +1,192 @@
+PENJELASAN KODE APLIKASI (App.vue, TableView.vue, KanbanView.vue)
+
+1) RINGKASAN APLIKASI
+- Aplikasi: Task Management dengan dua tampilan: Tabel (TableView) dan Kanban (KanbanView).
+- Sumber data awal: API mock (https://mocki.io/v1/f7861fc0-9071-4034-afed-777f3b590c3c).
+- State utama disimpan di App.vue lalu diteruskan ke child components sebagai props dan event (emit) untuk sinkronisasi perubahan.
+- Fitur utama: tambah task, edit inline (tabel), pencarian, filter by developer, sorting multi kolom, komentar per task, dan drag & drop status (kanban).
+
+2) FILE: src/App.vue
+- State utama:
+  - currentView: menentukan tampilan aktif ('table' atau 'kanban').
+  - tasks: array task global yang menjadi sumber data untuk kedua tampilan.
+  - searchQuery, selectedDevelopers: untuk filter pencarian dan filter developer.
+  - sortConfig: konfigurasi sorting multi kolom (urutan dan arah asc/desc).
+  - showSearchModal, showPersonModal, showSortModal: toggle modal di header.
+  - tableView, kanbanView: ref untuk memanggil fungsi/aksi di komponen anak (mis. buka form new task).
+
+- Lifecycle & Load data:
+  - onMounted(): fetch data dari API, lalu diolah manual ke bentuk task lokal:
+    { id, task, developers[], status, priority, type, date: '', estimatedSP, actualSP, comments: [] }
+  - Catatan: date dibuat kosong ('') agar user bisa isi sendiri.
+
+- Derived data (computed):
+  - allDevelopers: himpunan developer unik dari seluruh task.
+  - filteredTasks: menerapkan search, filter developer, dan sorting berurutan sesuai sortConfig.
+
+- Event handlers utama:
+  - addNewTask(task): menambah task baru ke awal array tasks.
+  - updateTask(t): mencari task by id lalu mengganti objeknya dengan versi terbaru (termasuk komentar).
+  - deleteTask(id): menghapus task berdasarkan id.
+  - changeView(v): ganti tampilan aktif.
+  - toggleSearch / togglePerson / toggleSort: buka/tutup modal.
+  - clearFilters / toggleDeveloper / addSortColumn: kontrol filter dan penyusunan sortConfig.
+  - handleNewTask(): memanggil form add task pada TableView atau KanbanView via ref.
+
+- Aliran data:
+  - App.vue mengirim props ke TableView dan KanbanView.
+  - Perubahan dari anak (add-task, update-task, delete-task, update-sort) dipantulkan kembali ke App.vue sehingga state global konsisten.
+
+3) FILE: src/components/TableView.vue
+- Props: tasks, sortConfig (dari App.vue).
+- Emits: 'add-task', 'update-task', 'delete-task', 'update-sort'.
+
+- State lokal penting:
+  - editingCell, editingValue: mengatur inline editing (klik sel => input sementara => simpan emit update-task).
+  - showNewTaskRow & newTask: baris input tambah task di atas tabel.
+  - selectedTasks: checklist baris untuk select all / individual.
+  - showCommentModal, currentCommentTask, newComment: modal komentar untuk task terpilih.
+
+- Tambah task (handleAddTask):
+  - Emit 'add-task' dengan objek newTask.
+  - Reset newTask ke default (date tetap kosong). Tutup baris input.
+
+- Inline edit (startEdit, saveEdit, cancelEdit):
+  - startEdit: set cell yang sedang di-edit dan nilai awalnya.
+  - saveEdit: normalisasi nilai (developer: split koma; angka: parseFloat) lalu emit 'update-task'.
+
+- Komentar (openCommentModal, addComment):
+  - openCommentModal(task): buka modal untuk task tersebut.
+  - addComment(): menambahkan objek { text, createdAt } ke array comments, emit 'update-task', dan bersihkan input komentar.
+
+- Sorting kolom tabel:
+  - handleSort(field): membentuk sortConfig baru (toggle asc -> desc -> off) kemudian emit 'update-sort'.
+  - getSortIndicator: menampilkan panah arah sorting pada header.
+
+- Persentase ringkasan (status, priority, type, date):
+  - Menghitung distribusi nilai berdasarkan isi tasks, ditampilkan sebagai bar kecil atau potongan ringkas.
+
+- Tanggal:
+  - formatDate(): jika kosong/invalid, tampilkan '-'; jika valid, format ke "dd MMM, yyyy".
+
+4) FILE: src/components/KanbanView.vue
+- Props: tasks.
+- Emits: 'add-task', 'update-task'.
+
+- State & opsi penting:
+  - showModal: modal form tambah task.
+  - showCommentModal, currentCommentTask, newComment: modal komentar.
+  - draggedTask: menyimpan card yang sedang di-drag.
+  - newTask: objek form untuk task baru (date default kosong '').
+  - statusColumns: enam kolom status (Ready to start, In Progress, Waiting for review, Pending Deploy, Done, Stuck).
+  - priorityOptions, typeOptions: opsi tampilan badge di card.
+
+- Horizontal scroll kolom:
+  - Container kanban diubah menjadi flex horizontal dengan overflow-x-auto.
+  - Tiap kolom memiliki lebar tetap (w-72) dan flex-shrink-0 agar bisa di-scroll ke kanan.
+  - Di dalam kolom, item (card) tetap mengalir ke bawah (space-y-3).
+
+- DnD (drag & drop):
+  - handleDragStart(task): simpan task yang didrag.
+  - handleDragOver(e): preventDefault agar drop bisa terjadi.
+  - handleDrop(e, newStatus): jika status berbeda, ubah status task dan emit 'update-task'.
+  - handleDragEnd(): reset draggedTask.
+
+- Tambah task (modal):
+  - openModal/closeModal/resetForm: mengatur lifecycle form.
+  - handleSubmit(): validasi nama task, parsing developers dari string comma-separated ke array, lalu emit 'add-task'.
+
+- Komentar:
+  - openCommentModal(task) dan addComment() mirip TableView, menyisipkan objek komentar lalu emit 'update-task'.
+
+5) ALUR KERJA APLIKASI (Sederhana)
+- Inisialisasi: App.vue fetch data -> mapping -> simpan di tasks.
+- Tabel (TableView.vue):
+  - Tambah task via baris input -> emit add-task -> App.vue unshift task ke tasks.
+  - Edit inline -> emit update-task -> App.vue ganti objek task terkait.
+  - Hapus -> emit delete-task -> App.vue hapus dari tasks.
+  - Komentar -> emit update-task dengan comments terbaru.
+- Kanban (KanbanView.vue):
+  - Tambah task via modal -> emit add-task -> App.vue unshift task ke tasks.
+  - Drag & drop antar kolom -> emit update-task -> App.vue perbarui status.
+  - Komentar -> emit update-task dengan comments terbaru.
+
+6) KEPUTUSAN TEKNIS / KENAPA BEGITU
+- Tanpa library komponen (PrimeVue, DaisyUI, dsb.) agar ringan dan mudah dikontrol penuh.
+- State global di App.vue supaya kedua tampilan sinkron (single source of truth).
+- Date default kosong ('') supaya user bebas memilih tanggal, dan formatting ditangani saat tampil.
+- Parsing developers:
+  - TableView: inline edit menggunakan split(',') saat simpan.
+  - Kanban: form input developers bertipe string, diubah ke array saat submit.
+- Komentar disimpan dalam field comments[] per task dan selalu dipantulkan ke App.vue lewat emit update-task.
+- Kanban horizontal scroll: flex + overflow-x-auto agar kolom bisa di-scroll ke kanan sementara item tetap vertikal.
+
+7) CARA MENGEMBANGKAN (IDE SINGKAT)
+- Persistensi lokal: simpan tasks ke localStorage agar data bertahan setelah refresh.
+- Validasi form lebih rapi: tampilkan error per field daripada alert.
+ - Paginasi/virtual scroll untuk tabel jika data besar.
+ - API nyata: ganti mock API dengan backend sesungguhnya dan tambahkan endpoint POST/PUT/DELETE untuk perubahan.
+
+8) STRUKTUR DATA TASK (SKEMA RINCI)
+- id: number (unik per task)
+- task: string (nama tugas)
+- developers: string[] (list nama developer)
+- status: string ("Ready to start" | "In Progress" | "Waiting for review" | "Pending Deploy" | "Done" | "Stuck")
+- priority: string ("Critical" | "High" | "Medium" | "Low" | "Best Effort")
+- type: string ("Feature Enhancements" | "Other" | "Bug")
+- date: string (format ISO yyyy-MM-dd saat input; ditampilkan "dd MMM, yyyy"; bisa kosong '')
+- estimatedSP: number (>= 0)
+- actualSP: number (>= 0)
+- comments: Array<{ text: string, createdAt: string }>
+
+9) DETAIL FILTER, SEARCH, DAN SORT
+- **Search** (`searchQuery` di `App.vue`):
+  - Case-insensitive; memfilter `tasks` bila `task` mengandung kata kunci.
+- **Filter Developer** (`selectedDevelopers` di `App.vue`):
+  - Jika ada pilihan, hanya tampilkan task yang memiliki minimal satu developer yang terpilih.
+- **Sort Multi Kolom** (`sortConfig` di `App.vue` dan `handleSort` di `TableView.vue`):
+  - `sortConfig` adalah array prioritas; urutan menentukan prioritas sort.
+  - Klik header kolom: asc -> desc -> off (hapus kolom dari sortConfig).
+  - Komparator membandingkan field satu per satu sesuai urutan `sortConfig`.
+
+10) ALUR EVENT PENTING (END-TO-END)
+- **Tambah Task dari Tabel**:
+  - `TableView.vue` `handleAddTask()` -> emit('add-task', newTask)
+  - `App.vue` `addNewTask()` -> `tasks.value.unshift({ id: Date.now(), ...task })`
+- **Tambah Task dari Kanban**:
+  - `KanbanView.vue` `handleSubmit()` -> emit('add-task', taskData)
+  - `App.vue` `addNewTask()` -> unshift ke `tasks` (sama seperti tabel).
+- **Edit Inline Tabel**:
+  - `TableView.vue` `saveEdit()` -> emit('update-task', updated)
+  - `App.vue` `updateTask()` -> ganti objek pada index sesuai id.
+- **Komentar (Tabel/Kanban)**:
+  - `addComment()` -> update `comments` -> emit('update-task', updated)
+  - `App.vue` `updateTask()` -> simpan `comments` baru.
+- **Drag & Drop Kanban**:
+  - `handleDrop()` -> ubah `status` -> emit('update-task', updated)
+  - `App.vue` `updateTask()` -> status ikut tersimpan di sumber data.
+
+11) PENANGANAN TANGGAL
+- Input date menggunakan `type="date"` (YYYY-MM-DD) agar mudah dipilih.
+- Default date kosong ('') saat load awal dan saat membuat task baru.
+- Tabel menampilkan `'-'` bila kosong atau invalid (`formatDate()` cek NaN/time invalid).
+- User dapat mengisi/ubah tanggal kapan saja; perubahan dipantulkan via `update-task`.
+
+12) PERTIMBANGAN KINERJA & KETERBATASAN
+- Semua data berada di memori (state Vue) tanpa backend persistensi.
+- Sorting/filtering dilakukan di client setiap render; aman untuk dataset kecil-menengah.
+- Drag & drop sederhana, tanpa animasi kompleks; dapat ditingkatkan jika dataset besar.
+- Tidak ada virtual scroll/pagination; jika data besar, pertimbangkan optimasi.
+
+13) STRATEGI STYLING & TATA LETAK
+- Menggunakan kelas utilitas (mirip Tailwind) untuk warna, padding, border, dll.
+- Tabel: min-width agar kolom tidak pecah di layar sempit, ada horizontal scroll natural pada tabel.
+- Kanban: container `overflow-x-auto` + `flex` horizontal + kolom `w-72 flex-shrink-0` agar bisa di-scroll ke kanan.
+- Badge warna per `status`, `priority`, `type` dikelola melalui objek mapping warna lokal.
+
+14) CATATAN TEKNIS LAINNYA
+- Komponen tidak menggunakan library UI (PrimeVue/DaisyUI/Vuetify, dll.).
+- `App.vue` bertindak sebagai single source of truth; komunikasi anak-orangtua via props/emit.
+- Struktur kode sengaja dibuat sederhana dan apa adanya agar mudah dipahami/dievaluasi.
+
+Selesai.
