@@ -73,4 +73,4 @@ Materi
 
 # Hasil ScreenShoot
 
-![alt text](localhost_5173_.png) ![alt text](<localhost_5173_ (1).png>) 
+![alt text](localhost_5173.png) ![alt text](<localhost_5173_ (1).png>) 
