@@ -75,35 +75,35 @@ const statusPercentages = computed(() => {
   return pcts
 })
 
-function getTasksByStatus(status) {
-  let filtered = []
-  for(let i = 0; i < props.tasks.length; i++) {
-    if(props.tasks[i].status === status) {
-      filtered.push(props.tasks[i])
+const getTasksByStatus = (status) => {
+  let filtered = [];
+  for (let i = 0; i < props.tasks.length; i++) {
+    if ((props.tasks[i].status === status)) {
+      filtered.push(props.tasks[i]);
     }
   }
-  return filtered
-}
+  return filtered;
+};
 
-function openModal() {
+const openModal = () => {
   if (!showModal.value) {
-    showModal.value = true
+    showModal.value = true;
   } else {
-    showModal.value = true
+    showModal.value = true;
   }
-}
+};
 
-function closeModal() {
-  if (showModal.value === true) {
-    showModal.value = false
+const closeModal = () => {
+  if ((showModal.value === true)) {
+    showModal.value = false;
   } else {
-    showModal.value = false
+    showModal.value = false;
   }
-  resetForm()
-}
+  resetForm();
+};
 
-function resetForm() {
-  newTask.value = {
+const resetForm = () => {
+  const empty = {
     task: '',
     developers: '',
     status: 'Ready to start',
@@ -113,99 +113,100 @@ function resetForm() {
     estimatedSP: 0,
     actualSP: 0,
     comments: []
-  }
-}
+  };
+  newTask.value = empty;
+};
 
-function openCommentModal(task) {
-  currentCommentTask.value = task
+const openCommentModal = (task) => {
+  currentCommentTask.value = task;
   if (!showCommentModal.value) {
-    showCommentModal.value = true
+    showCommentModal.value = true;
   } else {
-    showCommentModal.value = true
+    showCommentModal.value = true;
   }
-}
+};
 
-function addComment() {
-  if (!currentCommentTask.value) return
-  const text = (newComment.value || '').trim()
-  if (!text) return
+const addComment = () => {
+  if (!currentCommentTask.value) return;
+  const text = (newComment.value || '').trim();
+  if (!text) return;
   const updated = {
     ...currentCommentTask.value,
     comments: [
       ...((currentCommentTask.value.comments) || []),
       { text, createdAt: new Date().toISOString() }
     ]
+  };
+  emit('update-task', updated);
+  currentCommentTask.value = updated;
+  newComment.value = '';
+};
+
+const getDeveloperInitials = (developers) => {
+  if ((!developers) || (developers.length === 0)) return '?';
+  return developers[0].charAt(0).toUpperCase();
+};
+
+const getDevInitial = (name) => {
+  if ((!name) || (typeof name !== 'string')) return '?';
+  return name.charAt(0).toUpperCase();
+};
+
+const handleSubmit = () => {
+  const name = newTask.value.task;
+  if ((!name) || (name === '')) {
+    alert('Task name is required!');
+    return;
   }
-  emit('update-task', updated)
-  currentCommentTask.value = updated
-  newComment.value = ''
-}
 
-function getDeveloperInitials(developers) {
-  if (!developers || developers.length === 0) return '?'
-  return developers[0].charAt(0).toUpperCase()
-}
-
-function getDevInitial(name) {
-  if (!name || typeof name !== 'string') return '?'
-  return name.charAt(0).toUpperCase()
-}
-
-function handleSubmit() {
-  const name = newTask.value.task
-  if (!name || name === '') {
-    alert('Task name is required!')
-    return
-  }
-
-  let taskData = { ...newTask.value }
-  const devLine = newTask.value.developers
-  let devs = []
+  let taskData = { ...newTask.value };
+  const devLine = newTask.value.developers;
+  let devs = [];
   if (devLine && typeof devLine === 'string') {
-    const parts = devLine.split(',')
+    const parts = devLine.split(',');
     for (let i = 0; i < parts.length; i++) {
-      const p = parts[i]
-      const s = p.trim()
-      if (s) devs.push(s)
+      const p = parts[i];
+      const s = p.trim();
+      if (s) devs.push(s);
     }
   }
-  taskData.developers = devs
+  taskData.developers = devs;
 
-  emit('add-task', taskData)
-  closeModal()
-}
+  emit('add-task', taskData);
+  closeModal();
+};
 
-function handleDragStart(task) {
-  draggedTask.value = task
-}
+const handleDragStart = (task) => {
+  draggedTask.value = task;
+};
 
-function handleDragOver(e) {
-  let evt = e
-  e.preventDefault()
-  evt = null
-}
+const handleDragOver = (e) => {
+  let evt = e;
+  e.preventDefault();
+  evt = null;
+};
 
-function handleDrop(e, newStatus) {
-  e.preventDefault()
+const handleDrop = (e, newStatus) => {
+  e.preventDefault();
   
-  if (draggedTask.value && draggedTask.value.status !== newStatus) {
-    let updatedTask = { ...draggedTask.value }
-    const targetStatus = newStatus
+  if ((draggedTask.value) && (draggedTask.value.status !== newStatus)) {
+    let updatedTask = { ...draggedTask.value };
+    const targetStatus = newStatus;
     if (targetStatus) {
-      updatedTask.status = targetStatus
+      updatedTask.status = targetStatus;
     } else {
-      updatedTask.status = newStatus
+      updatedTask.status = newStatus;
     }
-    const payload = updatedTask
-    emit('update-task', payload)
+    const payload = updatedTask;
+    emit('update-task', payload);
   }
   
-  draggedTask.value = null
-}
+  draggedTask.value = null;
+};
 
-function handleDragEnd() {
-  draggedTask.value = null
-}
+const handleDragEnd = () => {
+  draggedTask.value = null;
+};
 
 defineExpose({ openModal })
 </script>

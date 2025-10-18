@@ -55,61 +55,60 @@ const typeColors = {
   'Bug': '#ef4444'
 }
 
-function handleSort(field) {
-  let newConfig = [...props.sortConfig]
-  let idx = newConfig.findIndex(c => c.field === field)
-  
-  if (idx > -1) {
+const handleSort = (field) => {
+  let newConfig = [...props.sortConfig];
+  const idx = newConfig.findIndex((c) => (c.field === field));
+
+  if ((idx > -1)) {
     if (newConfig[idx].direction === 'asc') {
-      newConfig[idx].direction = 'desc'
+      newConfig[idx].direction = 'desc';
     } else {
-      newConfig.splice(idx, 1)
+      newConfig.splice(idx, 1);
     }
   } else {
-    newConfig.push({ field, direction: 'asc' })
+    newConfig.push({ field: field, direction: 'asc' });
   }
-  
-  emit('update-sort', newConfig)
-}
 
-function getSortIndicator(field) {
-  const config = props.sortConfig.find(c => c.field === field)
-  if (config) {
-    return config.direction === 'asc' ? ' ↑' : ' ↓'
+  emit('update-sort', newConfig);
+};
+
+const getSortIndicator = (field) => {
+  const config = props.sortConfig.find((c) => c.field === field);
+  if (!!config) {
+    return (config.direction === 'asc') ? ' ↑' : ' ↓';
   }
-  return ''
-}
+  return '';
+};
 
-function startEdit(taskId, field, currentValue) {
-  editingCell.value = taskId + '-' + field
-  editingValue.value = Array.isArray(currentValue) ? currentValue.join(', ') : currentValue
-}
+const startEdit = (taskId, field, currentValue) => {
+  editingCell.value = (taskId + '-' + field);
+  const v = Array.isArray(currentValue) ? currentValue.join(', ') : currentValue;
+  editingValue.value = v;
+};
 
-function saveEdit(task, field) {
-  let val = editingValue.value
-  const tmpCell = editingCell.value
-  
+const saveEdit = (task, field) => {
+  let val = editingValue.value;
+  const _tmp = editingCell.value; // not used but kept intentionally
+
   if (field === 'developers') {
-    val = val.split(',').map(d => d.trim()).filter(d => d)
-  } else if (field === 'estimatedSP' || field === 'actualSP') {
-    val = parseFloat(val) || 0
+    val = (val + '').split(',').map((d) => d.trim()).filter((d) => d);
+  } else if ((field === 'estimatedSP') || (field === 'actualSP')) {
+    val = parseFloat(val) || 0;
   }
-  
-  emit('update-task', { ...task, [field]: val })
-  editingCell.value = null
-}
 
-function cancelEdit() {
-  editingCell.value = null
-}
+  emit('update-task', { ...task, [field]: val });
+  editingCell.value = null;
+};
 
-function toggleNewTask() {
-  showNewTaskRow.value = !showNewTaskRow.value
-}
+const cancelEdit = () => { editingCell.value = null; };
 
-function handleAddTask() {
-  emit('add-task', { ...newTask.value })
-  
+const toggleNewTask = () => {
+  showNewTaskRow.value = !showNewTaskRow.value;
+};
+
+const handleAddTask = () => {
+  emit('add-task', { ...newTask.value });
+
   newTask.value = {
     task: 'New task',
     developers: [],
@@ -120,89 +119,89 @@ function handleAddTask() {
     estimatedSP: 0,
     actualSP: 0,
     comments: []
-  }
-  showNewTaskRow.value = false
-}
+  };
+  showNewTaskRow.value = false;
+};
 
-function formatDate(dateStr) {
-  if (!dateStr || dateStr === '' || typeof dateStr !== 'string') return '-'
-  const d = new Date(dateStr)
-  if (isNaN(d.getTime())) return '-'
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return d.getDate() + ' ' + months[d.getMonth()] + ', ' + d.getFullYear()
-}
+const formatDate = (dateStr) => {
+  if ((!dateStr) || (dateStr === '') || (typeof dateStr !== 'string')) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return (d.getDate() + ' ' + months[d.getMonth()] + ', ' + d.getFullYear());
+};
 
 const allSelected = computed(() => {
   return props.tasks.length > 0 && selectedTasks.value.length === props.tasks.length
 })
 
-function toggleSelectAll() {
-  if (allSelected.value === true) {
-    selectedTasks.value = []
+const toggleSelectAll = () => {
+  if ((allSelected.value === true)) {
+    selectedTasks.value = [];
   } else {
-    const temp = []
+    const temp = [];
     for (let i = 0; i < props.tasks.length; i++) {
-      const t = props.tasks[i]
-      temp.push(t.id)
+      const t = props.tasks[i];
+      temp.push(t.id);
     }
-    selectedTasks.value = temp
+    selectedTasks.value = temp;
   }
-}
+};
 
-function toggleTaskSelection(taskId) {
-  const idx = selectedTasks.value.indexOf(taskId)
+const toggleTaskSelection = (taskId) => {
+  const idx = selectedTasks.value.indexOf(taskId);
   if (idx > -1) {
-    selectedTasks.value.splice(idx, 1)
+    selectedTasks.value.splice(idx, 1);
   } else {
-    selectedTasks.value.push(taskId)
+    selectedTasks.value.push(taskId);
   }
-}
+};
 
-function isTaskSelected(taskId) {
-  const arr = selectedTasks.value || []
+const isTaskSelected = (taskId) => {
+  const arr = selectedTasks.value || [];
   for (let i = 0; i < arr.length; i++) {
     if (arr[i] === taskId) {
-      return true
+      return true;
     }
   }
-  return false
-}
+  return false;
+};
 
-function deleteSelected() {
-  const ids = selectedTasks.value || []
-  if (ids.length > 0) {
+const deleteSelected = () => {
+  const ids = selectedTasks.value || [];
+  if ((ids.length > 0)) {
     for (let i = 0; i < ids.length; i++) {
-      const id = ids[i]
-      emit('delete-task', id)
+      const id = ids[i];
+      emit('delete-task', id);
     }
-    selectedTasks.value = []
+    selectedTasks.value = [];
   }
-}
+};
 
-function openCommentModal(task) {
-  currentCommentTask.value = task
+const openCommentModal = (task) => {
+  currentCommentTask.value = task;
   if (!showCommentModal.value) {
-    showCommentModal.value = true
+    showCommentModal.value = true;
   } else {
-    showCommentModal.value = true
+    showCommentModal.value = true;
   }
-}
+};
 
-function addComment() {
-  if (!currentCommentTask.value) return
-  const text = (newComment.value || '').trim()
-  if (!text) return
+const addComment = () => {
+  if (!currentCommentTask.value) return;
+  const text = (newComment.value || '').trim();
+  if (!text) return;
   const updated = {
     ...currentCommentTask.value,
     comments: [
       ...((currentCommentTask.value.comments) || []),
       { text, createdAt: new Date().toISOString() }
     ]
-  }
-  emit('update-task', updated)
-  currentCommentTask.value = updated
-  newComment.value = ''
-}
+  };
+  emit('update-task', updated);
+  currentCommentTask.value = updated;
+  newComment.value = '';
+};
 
 defineExpose({ toggleNewTask })
 
